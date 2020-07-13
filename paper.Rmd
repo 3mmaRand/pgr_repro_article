@@ -1,0 +1,295 @@
+---
+title: "."
+author: "Emma Rand"
+output:
+  bookdown::html_document2: default
+  bookdown::word_document2: default
+  bookdown::pdf_document2: default
+bibliography: ["refs/refs-r.bib", "refs/refs-project.bib"]
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, 
+                      warning = FALSE,
+                      message = FALSE,
+                      fig.retina = 3)
+```
+
+```{r packages}
+library(tidyverse)
+library(patchwork)
+library(likert)
+
+```
+
+```{r}
+# palette
+pal <- viridisLite::viridis(6)
+```
+
+
+# Introduction
+
+
+# Methods
+
+I used R [@R-core] with tidyverse packages [@tidyverse-pkg; @tidyverse-paper] for all analyses and the rmarkdown [@markdown-pkg; @markdown-book] and bookdown [@bookdown-pkg; @bookdown-book] packages for manuscript preparation.
+
+```{r import-precourse-survey}
+# data not shared
+file <- "data-presurvey/responses.csv"
+survey <- read_csv(file) 
+```
+
+
+```{r values}
+participants <- survey$Name
+n_partic <- length(participants)
+```
+
+
+```{r import-attend}
+# data not shared
+files <- dir("data-participation/", pattern = ".csv", full.names = TRUE)
+
+attend <- files %>% 
+  map_dfr(read_csv) %>% 
+  filter(Name %in% participants) %>% 
+  group_by(Name, session) %>% 
+  summarise(minutes = sum(`Duration (Minutes)` ),
+            attend = status) %>% 
+  distinct()
+
+```
+
+# Results
+
+```{r summarise-precourse}
+analysis_summary <- survey %>% 
+  group_by(`In what package/programme are you MOST likely to carry out data analysis and visualisation currently?`) %>% 
+  summarise(n = length(`In what package/programme are you MOST likely to carry out data analysis and visualisation currently?`),
+            mean_expertise = mean(`Please rate your expertise in R`),
+            se_expertise = sd(`Please rate your expertise in R`)/sqrt(n)) 
+
+report_summary <- survey %>% 
+  group_by(`In what package/programme are you MOST likely to write up analysis results to submit to a journal or similar?`) %>% 
+  summarise(n = length(`In what package/programme are you MOST likely to write up analysis results to submit to a journal or similar?`),
+            mean_expertise = mean(`Please rate your expertise in R`),
+            se_expertise = sd(`Please rate your expertise in R`)/sqrt(n))
+
+```
+
+```{r extract}
+anal_r <- analysis_summary %>% 
+  filter(`In what package/programme are you MOST likely to carry out data analysis and visualisation currently?` == "R") %>% 
+  select(n) %>% as.numeric()
+
+anal_not_r <- n_partic - anal_r
+```
+
+```{r}
+attend %>% 
+  ggplot() +
+  geom_tile(aes(y = Name, x = session, fill = attend), colour = "white") +
+  scale_fill_manual(values =  c("#BABABA", pal[c(3, 5)]),
+                    name = "Status")
+```
+
+There were `r n_partic` PhD students in the cohort.
+
+```{r}
+
+```
+
+
+
+See Figure \@ref(fig:analysis-software-fig)
+
+(ref:analysis-software-fig) Responses to the precourse survey question "In what package/programme are you MOST likely to carry out data analysis and visualisation currently?"
+
+
+```{r analysis-software-fig, fig.cap='(ref:analysis-software-fig)'}
+f1 <- analysis_summary %>% 
+  ggplot(aes(x = reorder(`In what package/programme are you MOST likely to carry out data analysis and visualisation currently?`, n),
+             y = n)) +
+  geom_bar(fill = "black", stat = "identity") +
+  scale_x_discrete(name = "",
+                   expand = c(0, 0)) +
+  scale_y_continuous(name = "Number of people",
+                     expand = c(0, 0),
+                     limits = c(0, 16),
+                     breaks = seq(0, 15, 5),) +
+  theme_classic() + 
+  theme(plot.margin = margin(t = 0, r = 0, l = 0)) +
+  coord_flip()
+
+f2 <- analysis_summary %>% 
+  ggplot(aes(x = reorder(`In what package/programme are you MOST likely to carry out data analysis and visualisation currently?`,n), 
+             y = mean_expertise)) +
+  geom_bar(fill = "white", stat = "identity") +
+  geom_point() +
+  geom_errorbar(aes(x = `In what package/programme are you MOST likely to carry out data analysis and visualisation currently?`,
+                    ymin = mean_expertise - se_expertise,
+                    ymax = mean_expertise + se_expertise),
+                width = 0.3) +
+  scale_x_discrete(name = "",
+                   labels = NULL,
+                   expand = c(0, 0)) +
+  scale_y_continuous(name = "Self-rated expertise with R",
+                     expand = c(0, 0),
+                     breaks = seq(0, 10, 2),
+                     limits = c(0, 10.5)) +
+  theme_classic() + 
+  theme(plot.margin = margin(t = 0, r = 0, l = 0)) +
+  coord_flip()
+
+layout <- "
+ab
+"
+
+f1 + f2 + 
+  plot_layout(design = layout) +
+  plot_annotation(tag_levels = "A") &
+    theme(plot.tag = element_text(size = 9, hjust = 0, face = "bold"))
+  
+```
+
+See Figure \@ref(fig:report-software-fig)
+
+(ref:report-software-fig) Responses to the precourse survey question "In what package/programme are you MOST likely to write up analysis results to submit to a journal or similar?"
+
+
+```{r report-software-fig, fig.cap='(ref:report-software-fig)'}
+f1 <- report_summary %>% 
+  ggplot(aes(x = reorder(`In what package/programme are you MOST likely to write up analysis results to submit to a journal or similar?`,n),
+             y = n)) +
+  geom_bar(fill = "black", stat = "identity") +
+  scale_x_discrete(name = "",
+                   expand = c(0, 0)) +
+  scale_y_continuous(name = "Number of people",
+                     expand = c(0, 0),
+                     limits = c(0, 46),
+                     breaks = seq(0, 40, 10),) +
+  theme_classic() + 
+  theme(plot.margin = margin(t = 0, r = 0, l = 0)) +
+  coord_flip()
+
+f2 <- report_summary %>% 
+  ggplot(aes(x = reorder(`In what package/programme are you MOST likely to write up analysis results to submit to a journal or similar?`, n), 
+             y = mean_expertise)) +
+  geom_bar(fill = "white", stat = "identity") +
+  geom_point() +
+  geom_errorbar(aes(x = `In what package/programme are you MOST likely to write up analysis results to submit to a journal or similar?`,
+                    ymin = mean_expertise - se_expertise,
+                    ymax = mean_expertise + se_expertise),
+                width = 0.3) +
+  scale_x_discrete(name = "",
+                   labels = NULL,
+                   expand = c(0, 0)) +
+  scale_y_continuous(name = "Self-rated expertise with R",
+                     expand = c(0, 0),
+                     breaks = seq(0, 10, 2),
+                     limits = c(0, 10.5)) +
+  theme_classic() + 
+  theme(plot.margin = margin(t = 0, r = 0, l = 0)) +
+  coord_flip()
+
+layout <- "
+ab
+"
+
+f1 + f2 + 
+  plot_layout(design = layout) +
+  plot_annotation(tag_levels = "A") &
+    theme(plot.tag = element_text(size = 9, hjust = 0, face = "bold"))
+ 
+```
+```{r}
+pre_comfort <- survey %>% 
+  select(starts_with("Please rate your level of comfort" )) %>%
+  drop_na() %>% 
+  data.frame(check.names = FALSE)
+
+
+comfort_q <- "Please rate your level of comfort with the following in R"
+
+names(pre_comfort) <- names(pre_comfort) %>% 
+  sub(pattern = paste0(comfort_q, "\\s+\\["), 
+      replacement = "") %>% 
+  sub(pattern = "\\]", replacement = "")         
+
+levels <- c("Not at all comfortable",
+            "A bit uncomfortable",
+            "Quite comfortable",
+            "Completely comfortable")
+
+pre_comfort <- pre_comfort %>% 
+  mutate(`working directories, relative and absolute paths` =
+           factor(`working directories, relative and absolute paths`, 
+                  levels = levels) ,
+         `importing data in plain text files` =
+           factor(`importing data in plain text files`, 
+                  levels = levels) ,
+         `importing data in almost any file format` =
+           factor(`importing data in almost any file format`, 
+                  levels = levels) ,
+         `importing data through APIs` =
+           factor(`importing data through APIs`, 
+                  levels = levels) ,
+         `reshaping data` =
+           factor(`reshaping data`, 
+                  levels = levels),
+         `summarising data` =
+           factor(`summarising data`, 
+                  levels = levels),
+         `text processing column names and cell contents` =
+           factor(`text processing column names and cell contents`, 
+                  levels = levels),
+         `plotting data` =
+           factor(`plotting data`, 
+                  levels = levels),
+         `formatting figures for publication` =
+           factor(`reshaping data`, 
+                  levels = levels),
+         `the tidyverse` =
+           factor(`the tidyverse`, 
+                  levels = levels),
+         `the pipe %>%` =
+           factor(`the pipe %>%`, 
+                  levels = levels),
+         `RMarkdown for blending text, analysis and figures` =
+           factor(`RMarkdown for blending text, analysis and figures`, 
+                  levels = levels),
+         `More advanced RMarkdown features such as cross referenced tables, figures, citations and a wide variety of YAML options ` =
+           factor(`More advanced RMarkdown features such as cross referenced tables, figures, citations and a wide variety of YAML options `, 
+                  levels = levels))
+```
+
+```{r}
+comfort <- likert(pre_comfort)
+order <- names(pre_comfort)
+
+plot(comfort,
+          group.order = order,
+          legend.position = "top",
+          legend = "",
+          text.size = 3,
+          low.color = pal[3],
+          high.col = pal[5]) +
+  theme(axis.title.x = element_blank(),
+        axis.line.x = element_blank())
+```
+
+See Table \@ref(tab:summary-table).  
+
+```{r summary-table}
+
+```
+
+
+
+# Discussion
+
+
+# References
+
